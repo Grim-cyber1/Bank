@@ -1,36 +1,33 @@
+# Задача по классификации (BANK MODEL)
+
+
+
+# Импорт библиотек
 import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 import sklearn
+
+# Запуск проекта
 df = pd.read_csv("/content/Churn_Modelling.csv")
 
+# ознакомление с дата сетом
 df.head()
 
 df.info()
 
-plt.style.available
-
-plt.style.use('fivethirtyeight')
-
-plt.figure(figsize=(10,7))
-plt.plot()
-
+# созлание новых колонок из существующих
 df['Geography'].value_counts()
-
 df[['France', 'Germany', 'Spain']] = pd.get_dummies(df['Geography'], dtype=int)
-
 df.drop(columns=['Geography'], inplace=True)
-
 df['Gender'].value_counts()
-
 df[['Male', 'Female']] = pd.get_dummies(df['Gender'], dtype=int)
-
 df.drop(columns=['Gender'], inplace=True)
 
+# Моделирование
+# выбор элементов входных данных
 df.isnull().sum()
-
 df.dropna(axis=0, inplace=True)
-
 df.columns
 
 X = df[['CreditScore', 'Age', 'Tenure',
@@ -40,50 +37,46 @@ X = df[['CreditScore', 'Age', 'Tenure',
 
 Y = df['Exited']
 
+# Разделение набора данных на тренировочный и тестовый мини наборы (train, test split)
 from sklearn.linear_model import LogisticRegression
-
 from sklearn.model_selection import train_test_split
-
 X_train, X_test, Y_train, Y_test = train_test_split(X.values, Y.values, test_size=0.10, random_state=6)
-
 X_train.shape, X_test.shape
 
+
+# Универсальная функция для оценки модели по всем метрикам регрессии
 from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score, balanced_accuracy_score
-
-
 def all_classif_scores(model, name_model, X_test, Test_y):
-
     ACC = round(accuracy_score(Y_test, model.predict(X_test)), 4)
     Bal_ACC = round(balanced_accuracy_score(Y_test, model.predict(X_test)), 4)
     RECALL = round(recall_score(Y_test, model.predict(X_test), average='micro'), 4)
     PRECISION = round(precision_score(Y_test, model.predict(X_test), average='micro'), 4)
     F1 = round(f1_score(Y_test, model.predict(X_test), average='micro'), 4)
-
     print(f'{name_model} model: \n', '      Acc: {0}     Bal_Acc: {1}     Recall: {2}     Precision: {3}     F1: {4}'.format(ACC, Bal_ACC, RECALL, PRECISION, F1))
 
+# Logistic regression (LR)
+from sklearn.linear_model import LogisticRegression
 LR = LogisticRegression(max_iter=200)
-
 LR.fit(X_train, Y_train)
 LR.score(X_test, Y_test)
-
 y_pred = LR.predict(X_test)
-
 all_classif_scores(LR, 'LR', X_test, Y_test)
 
+# Создание графика
 plt.figure(figsize=(17, 3))
 plt.plot(y_pred, color='r', label='прогнозные')
 plt.plot(Y_test, color='g', label='реальные')
 plt.grid()
 plt.legend()
-
 plt.figure(figsize=(17, 3))
 plt.plot(pd.DataFrame(y_pred).sort_values(0).reset_index().drop('index', axis=1), color='r', label='прогнозные')
 plt.plot(pd.DataFrame(Y_test).sort_values(0).reset_index().drop('index', axis=1), color='g', label='реальные')
 plt.grid()
 plt.legend()
 
-from sklearn.tree import DecisionTreeClassifier
 
+# Decision Tree Classifier
+from sklearn.tree import DecisionTreeClassifier
 DTC = DecisionTreeClassifier(criterion='gini',
                              splitter='best',
                              max_depth=9,
@@ -96,15 +89,12 @@ DTC = DecisionTreeClassifier(criterion='gini',
                              min_impurity_decrease=0.0,
                              class_weight=None,
                              ccp_alpha=0.0)
-
 DTC.fit(X_train, Y_train)
-
 DTC.score(X_test, Y_test)
-
 all_classif_scores(DTC, 'DTC', X_test, Y_test)
 
-from sklearn.ensemble import BaggingClassifier
 
+from sklearn.ensemble import BaggingClassifier
 BGC = BaggingClassifier(estimator=LogisticRegression(),
                         n_estimators=10,
                         max_samples=1.0,
@@ -117,14 +107,12 @@ BGC = BaggingClassifier(estimator=LogisticRegression(),
                         random_state=13,
                         verbose=0,
                         base_estimator='deprecated')
-
 BGC.fit(X_train, Y_train.ravel())
 BGC.score(X_test, Y_test.ravel())
-
 all_classif_scores(BGC, 'BGC', X_test, Y_test)
-
 Pred_BGC = BGC.predict(X_test)
 
+# Bagging Classifier
 from sklearn.ensemble import RandomForestClassifier
 RFC = RandomForestClassifier(n_estimators=100,
                             max_depth=None,
@@ -141,16 +129,14 @@ RFC = RandomForestClassifier(n_estimators=100,
                             warm_start=False,
                             ccp_alpha=0.0,
                             max_samples=None,)
-
 RFC.fit(X_train, Y_train.ravel())
 RFC.score(X_test, Y_test.ravel())
-
 all_classif_scores(RFC, 'RFC', X_test, Y_test)
-
 columns = X.columns
 
-from sklearn.ensemble import ExtraTreesClassifier
 
+# Random Forest Classifier
+from sklearn.ensemble import ExtraTreesClassifier
 ExTC = ExtraTreesClassifier(n_estimators=100,
                             max_depth=None,
                             min_samples_split=2,
@@ -166,55 +152,40 @@ ExTC = ExtraTreesClassifier(n_estimators=100,
                             warm_start=False,
                             ccp_alpha=0.0,
                             max_samples=None,)
-
 ExTC.fit(X_train, Y_train.ravel())
-
 ExTC.score(X_test, Y_test.ravel())
-
 all_classif_scores(ExTC, 'ExTC', X_test, Y_test)
 
+# Adaptive Boosting Classifier
 from sklearn.ensemble import AdaBoostClassifier
-
 AdBC = AdaBoostClassifier(random_state=0, n_estimators=100)
-
 AdBC.fit(X_train, Y_train.ravel())
-
 AdBC.score(X_test, Y_test.ravel())
-
 all_classif_scores(AdBC, 'AdBC', X_test, Y_test)
-
 from sklearn.ensemble import GradientBoostingClassifier
-
 GBC = GradientBoostingClassifier(
                                 learning_rate=0.1,
                                 n_estimators=100)
-
 GBC.fit(X_train, Y_train.ravel())
 GBC.score(X_test, Y_test.ravel())
 
+
+# TOTAL Results
 all_classif_scores(GBC, 'GBC', X_test, Y_test)
-
-
 all_classif_scores(LR, 'LC', X_test, Y_test)
-# all_classif_scores(KNNC, 'KNNC', X_test, Y_test)
 all_classif_scores(DTC, 'DTC', X_test, Y_test)
 all_classif_scores(BGC, 'BGC', X_test, Y_test)
 all_classif_scores(RFC, 'RFC', X_test, Y_test)
 all_classif_scores(ExTC, 'ExTC', X_test, Y_test)
 all_classif_scores(AdBC, 'AdBC', X_test, Y_test)
-# all_classif_scores(GBC, 'GBC', X_test, Y_test)
-# all_classif_scores(XGBC, 'XGBC', X_test, Y_test)
-# all_classif_scores(LGBMC, 'LGBMC', X_test, Y_test)
+
 
 df['Exited'].value_counts()
-
 Y_test.sum()
-
 model_pred = ExTC.predict(X_test)
-
 MODEL = ExTC
 
-
+# Создание модели
 import seaborn as sns
 from sklearn.metrics import confusion_matrix
 
